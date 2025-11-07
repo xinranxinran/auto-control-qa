@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <title>自动控制原理教学辅导答疑系统</title>
+  <!-- 引入国内可访问的Chart.js（绘图）和MathJax（公式渲染） -->
+  <script src="https://cdn.bootcdn.net/ajax/libs/Chart.js/4.4.8/chart.umd.min.js"></script>
+  <script src="https://cdn.bootcdn.net/ajax/libs/mathjax/3.2.2/es5/tex-mml-chtml.min.js"></script>
+  <style>
+    .container { width: 80%; margin: 0 auto; padding: 20px; }
+    .search { margin-bottom: 20px; display: flex; gap: 10px; }
+    .content { border: 1px solid #ccc; min-height: 400px; padding: 20px; }
+    button { padding: 8px 15px; cursor: pointer; }
+    .chart-container { width: 100%; height: 300px; margin: 20px 0; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <!-- 知识点检索区 -->
+    <div class="search">
+      <input type="text" id="keyword" placeholder="输入关键词（如阶跃响应、劳斯判据）">
+      <button onclick="searchByKeyword()">关键词检索</button>
+      <input type="text" id="id" placeholder="输入知识点编号（如78、16）">
+      <button onclick="searchById()">编号检索</button>
+    </div>
+
+    <!-- 内容展示区 -->
+    <div class="content" id="content">
+      <p>请通过上方检索功能选择知识点</p>
+    </div>
+
+    <!-- 互动操作区 -->
+    <div>
+      <button onclick="repeatDemo()">重复演示</button>
+      <button onclick="markAsMastered()">标记为掌握</button>
+      <button onclick="nextTopic()">下一个知识点</button>
+    </div>
+  </div>
+
+  <script>
+    // 模拟知识点数据库（可根据需求扩展）
+    const knowledgeBase = {
+      "78": {
+        title: "过阻尼二阶系统单位阶跃响应调节时间",
+        type: "chart",
+        content: `
+          <h3>调节时间 \( t_s \) 定义</h3>
+          <p>系统输出进入并保持在稳态值±5%（或±2%）误差带内的时间。</p>
+          <div class="chart-container">
+            <canvas id="chart78"></canvas>
+          </div>
+          <p>公式：\( t_s \approx \frac{3.5}{\zeta\omega_n} \)（\( \Delta=5\% \)），\( \zeta \) 为阻尼比，\( \omega_n \) 为无阻尼自然频率。</p>
+        `,
+        renderChart: function() {
+          const ctx = document.getElementById('chart78').getContext('2d');
+          new Chart(ctx, {
+            type: 'line',
+            data: {
+              labels: Array.from({length: 20}, (_, i) => i * 0.5),
+              datasets: [{
+                label: '过阻尼系统阶跃响应（\( \zeta=1.2, \omega_n=1 \)）',
+                data: Array.from({length: 20}, (_, i) => {
+                  const t = i * 0.5;
+                  return 1 - (1/(2*1.2-1))*Math.exp(-(1.2-√(1.2²-1))*t) + (1/(2*1.2+1))*Math.exp(-(1.2+√(1.2²-1))*t);
+                }),
+                borderColor: 'blue',
+                fill: false
+              }]
+            },
+            options: {
+              scales: {
+                y: { min: 0, max: 1.2 },
+                x: { title: { display: true, text: '时间 t' } }
+              },
+              plugins: {
+                annotation: {
+                  annotations: {
+                    errorBand5: {
+                      type: 'box',
+                      yMin: 0.95, yMax: 1.05,
+                      backgroundColor: 'rgba(0, 255, 0, 0.2)',
+                      label: { content: '±5% 误差带', position: 'top' }
+                    }
+                  }
+                }
+              }
+            }
+          });
+        }
+      },
+      "16": {
+        title: "典型自动控制系统方框图",
+        type: "image",
+        content: `
+          <h3>系统组成</h3>
+          <p>包含给定元件、比较环节、放大元件、执行元件、被控对象、测量元件。</p>
+          <img src="https://via.placeholder.com/600x300?text=自动控制系统方框图" alt="系统方框图" style="width:100%;">
+          <p>信号流向：给定输入 → 比较环节 → 控制器 → 执行器 → 被控对象 → 输出；<br>
+             反馈路径：输出 → 测量元件 → 比较环节。</p>
+        `
+      },
+      "68": {
+        title: "一阶系统单位阶跃响应特点",
+        type: "text",
+        content: `
+          <h3>核心结论</h3>
+          <ul>
+            <li style="color:green;">时间常数 \( T \) 决定响应速度：\( T \) 越小，响应越快。</li>
+            <li style="color:purple;">初始斜率：\( \left. \frac{dc(t)}{dt} \right|_{t=0} = \frac{1}{T} \)。</li>
+            <li style="color:blue;">动态指标：上升时间 \( t_r = 0.69T \)，调节时间 \( t_s = 2.20T \)（\( \Delta=5\% \)）。</li>
+            <li style="color:yellow;">稳态误差 \( e_{ss} = 0 \)。</li>
+          </ul>
+        `
+      },
+      "83": {
+        title: "劳斯判据表写方法",
+        type: "formula",
+        content: `
+          <h3>劳斯阵列构造步骤</h3>
+          <p>对于特征方程 \( a_0s^n + a_1s^{n-1} + \dots + a_n = 0 \)，构造如下阵列：</p>
+          <div style="text-align:center; margin:10px 0;">
+            \(
+            \begin{array}{c|ccccc}
+            s^n & a_0 & a_2 & a_4 & a_6 & \dots \\
+            s^{n-1} & a_1 & a_3 & a_5 & a_7 & \dots \\
+            s^{n-2} & b_1 & b_2 & b_3 & \dots & \\
+            s^{n-3} & c_1 & c_2 & \dots & & \\
+            \vdots & \vdots & \vdots & & & \\
+            s^0 & e_1 & & & & \\
+            \end{array}
+            \)
+          </div>
+          <p>其中 \( b_1 = \frac{a_1a_2 - a_0a_3}{a_1} \)，\( b_2 = \frac{a_1a_4 - a_0a_5}{a_1} \)，依此类推。</p>
+        `
+      },
+      "133": {
+        title: "最小相位振荡环节相频特性",
+        type: "formula",
+        content: `
+          <h3>相频特性公式</h3>
+          \(
+          \varphi(\omega) = \angle G(j\omega) = 
+          \begin{cases} 
+          -\arctan\frac{2\zeta\omega_n\omega}{\omega_n^2 - \omega^2} & 0 < \omega < \omega_n \\
+          -\frac{\pi}{2} & \omega = \omega_n \\
+          -\pi - \arctan\frac{2\zeta\omega_n\omega}{\omega_n^2 - \omega^2} & \omega > \omega_n 
+          \end{cases}
+          \)
+          <p>其中 \( \zeta \) 为阻尼比，\( \omega_n \) 为无阻尼自然频率。</p>
+          <div class="chart-container">
+            <canvas id="chart133"></canvas>
+          </div>
+        `,
+        renderChart: function() {
+          const ctx = document.getElementById('chart133').getContext('2d');
+          const zeta = 0.5, omega_n = 1;
+          const omegaList = Array.from({length: 50}, (_, i) => i * 0.1);
+          const phiList = omegaList.map(omega => {
+            if (omega < omega_n) {
+              return -Math.atan((2*zeta*omega_n*omega)/(omega_n**2 - omega**2)) * (180/Math.PI);
+            } else if (omega === omega_n) {
+              return -90;
+            } else {
+              return (-Math.PI - Math.atan((2*zeta*omega_n*omega)/(omega_n**2 - omega**2))) * (180/Math.PI);
+            }
+          });
+          new Chart(ctx, {
+            type: 'line',
+            data: {
+              labels: omegaList,
+              datasets: [{
+                label: `相频特性（\( \zeta=${zeta}, \omega_n=${omega_n} \)）`,
+                data: phiList,
+                borderColor: 'red',
+                fill: false
+              }]
+            },
+            options: {
+              scales: {
+                x: { title: { display: true, text: '频率 \( \omega \)' } },
+                y: { title: { display: true, text: '相角 \( \varphi(\omega) \) (°)' }, min: -180, max: 0 }
+              }
+            }
+          });
+        }
+      }
+    };
+
+    // 关键词检索函数
+    function searchByKeyword() {
+      const keyword = document.getElementById('keyword').value.trim();
+      if (!keyword) return;
+      const results = Object.values(knowledgeBase).filter(item => 
+        item.title.includes(keyword) || item.content.includes(keyword)
+      );
+      if (results.length > 0) {
+        renderKnowledge(results[0]);
+      } else {
+        document.getElementById('content').innerHTML = "<p>未找到匹配知识点，请尝试其他关键词</p>";
+      }
+    }
+
+    // 编号检索函数
+    function searchById() {
+      const id = document.getElementById('id').value.trim();
+      if (knowledgeBase[id]) {
+        renderKnowledge(knowledgeBase[id]);
+      } else {
+        document.getElementById('content').innerHTML = "<p>知识点编号不存在，请检查输入</p>";
+      }
+    }
+
+    // 渲染知识点内容
+    function renderKnowledge(knowledge) {
+      let html = `<h2>${knowledge.title}</h2>${knowledge.content}`;
+      document.getElementById('content').innerHTML = html;
+      // 若为图表类型，执行绘图函数
+      if (knowledge.type === 'chart' && knowledge.renderChart) {
+        knowledge.renderChart();
+      } else if (knowledge.type === 'formula' && knowledge.renderChart) {
+        knowledge.renderChart();
+      }
+      // MathJax 公式渲染（需触发更新）
+      MathJax.typeset();
+    }
+
+    // 互动功能函数
+    function repeatDemo() {
+      alert("演示将重复一次，请关注动态过程~");
+      // 可根据知识点类型添加具体重复逻辑（如重新绘图、重放动画等）
+    }
+
+    function markAsMastered() {
+      alert("已标记该知识点为掌握，继续加油！");
+      // 实际场景中可添加本地存储或后端记录逻辑
+    }
+
+    function nextTopic() {
+      alert("即将跳转到下一个知识点，保持学习节奏哦~");
+      // 实际场景中可添加知识点推荐逻辑
+    }
+  </script>
+</body>
+</html>
